@@ -7,8 +7,20 @@
     "test": "npm test"
   },
   "keywords": [
-    "youtube"
+    "youtube",
+    "whitelist"
   ],
-  "author": "yx2zhang",
-  "license": "ISC"
+  "author": "yx2zhang <zhangyangxu@gmail.com>",
+  "repository": "git@github.com:yx2zhang/youtube-whitelist.git",
+  "license": "BSD",
+  "dependencies": {
+    "async": "^1.4.2",
+    "debug": "~2.2.0",
+    "googleapis": "git+https://github.com/yx2zhang/google-api-nodejs-client.git",
+    "mocha": "^2.4.5",
+    "mongojs": "^1.4.1",
+    "underscore": "^1.8.3",
+    "expect": "~1.14.0",
+    "minimist": "~1.2.0"
+  }
 }

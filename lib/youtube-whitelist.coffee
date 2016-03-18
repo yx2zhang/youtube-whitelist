@@ -1,0 +1,77 @@
+
+google     = require('googleapis')
+youtubeCms = google.youtubePartner('v1')
+async      = require 'async'
+timeOut    = 600
+
+scopes = [
+  "https://www.googleapis.com/auth/youtubepartner",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
+  "https://www.googleapis.com/auth/youtube"
+]
+
+module.exports = util =
+  auth: (key, done)->
+    jwtClient = new google.auth.JWT(key.client_email, null, key.private_key, scopes, null)
+    jwtClient.authorize (err, tokens)->
+      google.options({ auth: jwtClient })
+      return done(err, { jwtClient: jwtClient, tokens: tokens })
+
+  syncWhitelist: (list, done)->
+    async.mapSeries list, (channel, next)->
+      util.syncChannel channel, (err, res)->
+        return next(err, res)
+    , (err, updatedList)->
+      return done(err, updatedList)
+
+  syncChannel: (channel, done)->
+    channel.note = []
+    channel.error = []
+
+    async.eachSeries channel.whitelistOwner, (owner, next)->
+      util.updateCms(channel, owner, next)
+    , (err, result)->
+      done(err, channel)
+
+  updateCms: (channel, owner, done)->
+    util.delay(youtubeCms.whitelists.get, timeOut) { id: channel.channelId, onBehalfOfContentOwner: owner }, (err, item)->
+      if err and err.code isnt 404
+        return util.handleError("Can't find channel from whitelist(csm: #{owner})", err, channel, done)
+
+      if !item and channel.active
+        util.delay(youtubeCms.whitelists.insert, timeOut) { resource: util.formatChannelData(channel), onBehalfOfContentOwner: owner }, (err, res)->
+          if err
+            return util.handleError("Can't insert channel to whitelist(cms: #{owner})", err, channel, done)
+
+          channel.note.push "inserted to whitelist(cms: #{owner})"
+          return done(err, channel)
+
+      else if item and !channel.active
+        util.delay(youtubeCms.whitelists.delete, timeOut) { id: channel.channelId, onBehalfOfContentOwner: owner }, (err, res)->
+          if err
+            return util.handleError("Can't delete cahnnel from whitelist(cms: #{owner})", err, channel, done)
+
+          channel.note.push "deleted from whitelist(cms: #{owner})"
+          return done(err, channel)
+      else
+        channel.note.push "nothing need to do(cms: #{owner})"
+        return done(null, channel)
+
+  delay: (func, time)->
+    (params, cb)->
+      setTimeout ()->
+        func(params, cb)
+      , time
+
+  handleError: (note, err, channel, done)->
+    note = note + " error: #{err.message}"
+    channel.note.push note
+    channel.error.push err
+
+    return done(null, channel)
+
+  formatChannelData: (channel)->
+    item =
+      "kind": "youtubePartner#whitelist"
+      "id": channel.channelId
+
