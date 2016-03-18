@@ -1,0 +1,14 @@
+{
+  "name": "youtube-whitelist",
+  "version": "0.0.0",
+  "description": "youtube whitelist",
+  "main": "index.coffee",
+  "scripts": {
+    "test": "npm test"
+  },
+  "keywords": [
+    "youtube"
+  ],
+  "author": "yx2zhang",
+  "license": "ISC"
+}
