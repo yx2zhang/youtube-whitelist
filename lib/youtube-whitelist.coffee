@@ -1,8 +1,9 @@
 
-google     = require('googleapis')
-youtubeCms = google.youtubePartner('v1')
-async      = require 'async'
-timeOut    = 600
+google      = require('googleapis')
+youtubeCms  = google.youtubePartner('v1')
+youtubeData = google.youtube('v3')
+async       = require 'async'
+timeOut     = 600
 
 scopes = [
   "https://www.googleapis.com/auth/youtubepartner",
@@ -74,4 +75,67 @@ module.exports = util =
     item =
       "kind": "youtubePartner#whitelist"
       "id": channel.channelId
+
+  removeCmsClaims: (params, done)->
+    { cms, vid } = params
+
+    youtubeCms.claimSearch.list { onBehalfOfContentOwner: cms, videoId: vid }, (err, res)->
+      return done(err, null) if err
+      claimIds = _.map res.items, (i)-> return  i.id
+      async.each claimIds, (cid, next)->
+        config =
+          onBehalfOfContentOwner: cms
+          claimsId: cid
+          resource:
+            status: 'inactive'
+
+        youtubeCms.claims.update config, (err, res)->
+          return next(err, res)
+      , (err)->
+        return done(err, null)
+
+  removeClaims: (params, done)->
+    { channels, user, videoId, whitelistOwners } = params
+    util.validateVideoId videoId, channels, (err, canRemove)->
+      return done(err, null) if err
+      return done(Error("You don't have the permission to remove the channel."), null) unless canRemove
+
+      async.each whitelistOwners, (cms, next)->
+        removeCmsClaims { cms: cms, vid: videoId }, next
+      (err, result)->
+        return done(err, null)
+      
+  validateVideoId: (vId, channels, done)->
+    found = false
+    async.each channels, (channel, next)->
+      return next(null, found) if found
+
+      util.getVideosByChannel { channelId: channel }, (err, vds)->
+        return next(err, false) if err
+
+        _.each vds, (v)-> found = true if v.contentDetails.videoId is vId
+        return next(null, null)
+    , (err)->
+      return done(err, found)
+
+  getVideosByChannel: (params, done)->
+    { channelId, playlist } = params
+    playlist = 'uploads' unless playlist
+
+    config =
+      part: 'contentDetails'
+      id: channelId
+
+    youtubeData.channels.list config, (err, res)->
+      return done(err, null) if err
+      list = res.items[0].contentDetails.relatedPlaylists[playlist]
+      return done(null, []) unless list
+
+      config =
+        part: 'contentDetails,snippet'
+        maxResults: 50
+        playlistId: list
+
+      youtubeData.playlistItems.list config, (err, res)->
+        return done(err, res.items)
 
