@@ -83,14 +83,20 @@ module.exports = util =
       return done(err, null) if err
       claimIds = _.map res.items, (i)-> return  i.id
       async.eachSeries claimIds, (cid, next)->
-        config =
-          onBehalfOfContentOwner: cms
-          claimsId: cid
-          resource:
-            status: 'inactive'
+        util.delay(youtubeCms.claims.get, timeOut) { claimId: cid }, (err, res)->
+          return next(err, res) if err
+          console.log 'show get claim res'
+          console.log err
+          console.log res
 
-        util.delay(youtubeCms.claims.update, timeOut) config, (err, res)->
-          return next(err, res)
+          config =
+            onBehalfOfContentOwner: cms
+            claimId: cid
+            resource:
+              status: 'inactive'
+
+          util.delay(youtubeCms.claims.update, timeOut) config, (err, res)->
+            return next(err, res)
       , (err)->
         return done(err, null)
 
