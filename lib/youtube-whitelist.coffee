@@ -108,7 +108,7 @@ module.exports = util =
 
       async.eachSeries whitelistOwners, (cms, next)->
         util.removeCmsClaims { cms: cms, vid: videoId }, next
-      (err, result)->
+      , (err, result)->
         return done(err, null)
       
   validateVideoId: (vId, channels, done)->

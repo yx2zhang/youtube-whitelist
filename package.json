@@ -1,6 +1,6 @@
 {
   "name": "youtube-whitelist",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "youtube whitelist",
   "main": "index.coffee",
   "scripts": {
