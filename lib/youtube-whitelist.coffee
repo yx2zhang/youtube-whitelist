@@ -101,7 +101,7 @@ module.exports = util =
       return done(Error("You don't have the permission to remove the channel."), null) unless canRemove
 
       async.each whitelistOwners, (cms, next)->
-        removeCmsClaims { cms: cms, vid: videoId }, next
+        util.removeCmsClaims { cms: cms, vid: videoId }, next
       (err, result)->
         return done(err, null)
       
