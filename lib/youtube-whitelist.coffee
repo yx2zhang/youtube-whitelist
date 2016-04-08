@@ -79,17 +79,17 @@ module.exports = util =
   removeCmsClaims: (params, done)->
     { cms, vid } = params
 
-    youtubeCms.claimSearch.list { onBehalfOfContentOwner: cms, videoId: vid }, (err, res)->
+    util.delay(youtubeCms.claimSearch.list, timeOut) { onBehalfOfContentOwner: cms, videoId: vid }, (err, res)->
       return done(err, null) if err
       claimIds = _.map res.items, (i)-> return  i.id
-      async.each claimIds, (cid, next)->
+      async.eachSeries claimIds, (cid, next)->
         config =
           onBehalfOfContentOwner: cms
           claimsId: cid
           resource:
             status: 'inactive'
 
-        youtubeCms.claims.update config, (err, res)->
+        util.delay(youtubeCms.claims.update, timeOut) config, (err, res)->
           return next(err, res)
       , (err)->
         return done(err, null)
@@ -100,14 +100,14 @@ module.exports = util =
       return done(err, null) if err
       return done(Error("You don't have the permission to remove the channel."), null) unless canRemove
 
-      async.each whitelistOwners, (cms, next)->
+      async.eachSeries whitelistOwners, (cms, next)->
         util.removeCmsClaims { cms: cms, vid: videoId }, next
       (err, result)->
         return done(err, null)
       
   validateVideoId: (vId, channels, done)->
     found = false
-    async.each channels, (channel, next)->
+    async.eachSeries channels, (channel, next)->
       return next(null, found) if found
 
       util.getVideosByChannel { channelId: channel }, (err, vds)->
