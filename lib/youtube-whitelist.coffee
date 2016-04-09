@@ -78,38 +78,47 @@ module.exports = util =
 
   removeCmsClaims: (params, done)->
     { cms, vid } = params
+    resultList = []
 
     util.delay(youtubeCms.claimSearch.list, timeOut) { onBehalfOfContentOwner: cms, videoId: vid }, (err, res)->
       return done(err, null) if err
-      claimIds = _.map res.items, (i)-> return  i.id
+
+      activeClaims = _.filter res.items, (i)-> i.thirdPartyClaim is false and i.status is 'active'
+      claimIds = _.map activeClaims, (i)-> return  i.id
+
       async.eachSeries claimIds, (cid, next)->
-        util.delay(youtubeCms.claims.get, timeOut) { claimId: cid }, (err, res)->
+        util.delay(youtubeCms.claims.get, timeOut) { claimId: cid, onBehalfOfContentOwner: cms }, (err, claim)->
           return next(err, res) if err
-          console.log 'show get claim res'
-          console.log err
-          console.log res
+          return next(null, null) unless claim
+          claim.status = 'inactive'
 
           config =
             onBehalfOfContentOwner: cms
             claimId: cid
-            resource:
-              status: 'inactive'
+            resource: claim
 
           util.delay(youtubeCms.claims.update, timeOut) config, (err, res)->
-            return next(err, res)
+            return next(err, null) if err
+
+            resultList.push res
+            return next(err, null)
       , (err)->
-        return done(err, null)
+        return done(err, resultList)
 
   removeClaims: (params, done)->
     { channels, user, videoId, whitelistOwners } = params
+    resultList = []
+
     util.validateVideoId videoId, channels, (err, canRemove)->
       return done(err, null) if err
       return done(Error("You don't have the permission to remove the channel."), null) unless canRemove
 
       async.eachSeries whitelistOwners, (cms, next)->
-        util.removeCmsClaims { cms: cms, vid: videoId }, next
+        util.removeCmsClaims { cms: cms, vid: videoId }, (err, removedClaims)->
+          resultList = _.union resultList, removedClaims if removedClaims
+          return next(err, null)
       , (err, result)->
-        return done(err, null)
+        return done(err, resultList)
       
   validateVideoId: (vId, channels, done)->
     found = false
