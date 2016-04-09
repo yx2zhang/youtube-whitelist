@@ -111,7 +111,7 @@ module.exports = util =
 
     util.validateVideoId videoId, channels, (err, canRemove)->
       return done(err, null) if err
-      return done(Error("You don't have the permission to remove the channel."), null) unless canRemove
+      return done(Error("You don't have the permission to remove claims on the video."), null) unless canRemove
 
       async.eachSeries whitelistOwners, (cms, next)->
         util.removeCmsClaims { cms: cms, vid: videoId }, (err, removedClaims)->
