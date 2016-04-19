@@ -83,7 +83,7 @@ module.exports = util =
     util.delay(youtubeCms.claimSearch.list, timeOut) { onBehalfOfContentOwner: cms, videoId: vid }, (err, res)->
       return done(err, null) if err
 
-      activeClaims = _.filter res.items, (i)-> i.thirdPartyClaim is false and i.status is 'active'
+      activeClaims = _.filter res.items, (i)-> i.thirdPartyClaim is false and i.status isnt 'inactive'
       claimIds = _.map activeClaims, (i)-> return  i.id
 
       async.eachSeries claimIds, (cid, next)->
